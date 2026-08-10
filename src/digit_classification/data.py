@@ -57,11 +57,19 @@ class MNISTDataModule(pl.LightningDataModule):
 
     def setup(self, stage):
 
-        # Pull data from file
-        dataset = MNIST(
-            self.data_dir,
+        # Pull data from file - Two different pulls for different transforms
+        train_dataset = MNIST(
+            root=self.data_dir,
             train=True,
-            transform=None,
+            download=False,
+            transform=self.train_transforms,
+        )
+
+        eval_dataset = MNIST(
+            root=self.data_dir,
+            train=True,
+            download=False,
+            transform=self.eval_transforms,
         )
 
         # Generate artificial quantities of data and partition
@@ -70,7 +78,7 @@ class MNISTDataModule(pl.LightningDataModule):
         test_indices = []
 
         for label, num_samples in self.num_samples.items():
-            label_indices = torch.where(dataset.targets == label)[0]
+            label_indices = torch.where(train_dataset.targets == label)[0]
 
             # Randomly permute indices deterministically
             permutation = torch.randperm(len(label_indices))
@@ -91,14 +99,14 @@ class MNISTDataModule(pl.LightningDataModule):
             )
 
         if stage == "fit":
-            self.train_dataset = Subset(dataset, train_indices)
-            self.val_dataset = Subset(dataset, val_indices)
+            self.train_dataset = Subset(train_dataset, train_indices)
+            self.val_dataset = Subset(eval_dataset, val_indices)
 
         elif stage == "validate":
-            self.val_dataset = Subset(dataset, val_indices)
+            self.val_dataset = Subset(eval_dataset, val_indices)
 
         elif stage == "test" or stage == "predict":
-            self.test_dataset = Subset(dataset, test_indices) 
+            self.test_dataset = Subset(eval_dataset, test_indices) 
 
         else:
             raise ValueError("Stage must be 'fit', 'validate', 'test', or 'predict'")
@@ -107,11 +115,14 @@ class MNISTDataModule(pl.LightningDataModule):
         train_transforms = transforms.Compose([
             transforms.ToTensor(),
         ])
+        return train_transforms
 
     def get_eval_transforms(self):
-        train_transforms = transforms.Compose([
+        eval_transforms = transforms.Compose([
             transforms.ToTensor(),
         ])
+        return eval_transforms
+
 
     def train_dataloader(self):
         return DataLoader(
@@ -125,7 +136,7 @@ class MNISTDataModule(pl.LightningDataModule):
         return DataLoader(
             self.val_dataset,
             batch_size=self.batch_size,
-            shuffle=True,
+            shuffle=False,
             num_workers=self.num_workers,
         )
 
@@ -148,6 +159,7 @@ class MNISTDataModule(pl.LightningDataModule):
 if __name__=="__main__":
     from tqdm import tqdm
     module = MNISTDataModule("/media/mrdragan/Ubuntu/buzz-solutions/data2")
+    module.prepare_data()
     module.setup('fit')
     train_dataloader = module.train_dataloader()
     val_dataloader = module.val_dataloader()
