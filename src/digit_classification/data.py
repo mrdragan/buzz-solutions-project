@@ -2,7 +2,8 @@ from collections import Counter
 import math
 from pathlib import Path
 import torch
-from torch.utils.data import Subset, DataLoader
+from torch.utils.data import (Subset, DataLoader, 
+    RandomSampler, WeightedRandomSampler)
 from torchvision.datasets import MNIST
 from torchvision import transforms
 import pytorch_lightning as pl
@@ -16,7 +17,8 @@ class MNISTDataModule(pl.LightningDataModule):
         num_workers: int = 4,
         train_fraction: float = 0.6,
         val_fraction: float = 0.2,
-        test_fraction: float = 0.2
+        test_fraction: float = 0.2,
+        use_weighted_sampler: bool = False
     ):
         super().__init__()
 
@@ -27,6 +29,7 @@ class MNISTDataModule(pl.LightningDataModule):
         self.train_fraction = train_fraction
         self.val_fraction = val_fraction
         self.test_fraction = test_fraction
+        self.use_weighted_sampler = use_weighted_sampler
 
         assert math.isclose(self.train_fraction + self.val_fraction + self.test_fraction, 1.0), \
             "Train, validation, and test fractions must sum to one."
@@ -107,10 +110,18 @@ class MNISTDataModule(pl.LightningDataModule):
 
         # Setup datasets as needed
         if stage == "fit":
+
             self.train_dataset = RemapLabels(
                 Subset(train_dataset, train_indices), self.label_map)
+
             self.val_dataset = RemapLabels(
                 Subset(eval_dataset, val_indices), self.label_map)
+
+            # If we want to use a weighted sampler
+            if self.use_weighted_sampler:
+                self._setup_sampler(train_dataset, train_indices)
+            else:
+                self.train_sampler = RandomSampler(self.train_dataset)
 
         elif stage == "validate":
             self.val_dataset = RemapLabels(
@@ -140,7 +151,7 @@ class MNISTDataModule(pl.LightningDataModule):
         return DataLoader(
             self.train_dataset,
             batch_size=self.batch_size,
-            shuffle=True,
+            sampler=self.train_sampler,
             num_workers=self.num_workers,
         )
 
@@ -166,6 +177,22 @@ class MNISTDataModule(pl.LightningDataModule):
             batch_size=self.batch_size,
             shuffle=False,
             num_workers=self.num_workers,
+        )
+
+    def _setup_sampler(self, train_dataset, train_indices):
+        train_targets = torch.tensor([
+            train_dataset.targets[i]
+            for i in train_indices
+        ])
+
+        class_counts = torch.bincount(train_targets)
+
+        sample_weights = 1.0 / class_counts[train_targets]
+
+        self.train_sampler = WeightedRandomSampler(
+            sample_weights,
+            num_samples=len(sample_weights),
+            replacement=True,
         )
 
 class RemapLabels(torch.utils.data.Dataset):

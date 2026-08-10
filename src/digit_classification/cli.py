@@ -42,11 +42,13 @@ def train(
     num_workers: int = 4,
     train_fraction: float = 0.6,
     val_fraction: float = 0.2,
-    test_fraction: float = 0.2
+    test_fraction: float = 0.2, 
+    use_weighted_sampler: bool = typer.Option(False, "--weighted-sampler")
 ):
     """
     Trains the classification model
     """
+
     if no_hidden:
         hidden_dims = []
 
@@ -61,7 +63,8 @@ def train(
                               num_workers=num_workers,
                               train_fraction=train_fraction,
                               val_fraction=val_fraction,
-                              test_fraction=test_fraction)
+                              test_fraction=test_fraction,
+                              use_weighted_sampler=use_weighted_sampler)
 
     trainer.fit(model, datamodule=data_module)
 
@@ -138,14 +141,16 @@ def _setup_model(learning_rate, hidden_dims, pool_indexes):
     return model
 
 def _setup_data(data_dir, batch_size=32, num_workers=4,
-                train_fraction=0.6, val_fraction=0.2, test_fraction=0.2):
+                train_fraction=0.6, val_fraction=0.2, test_fraction=0.2,
+                use_weighted_sampler=False):
 
     data_module = MNISTDataModule(data_dir=data_dir, 
                                  batch_size=batch_size,
                                  num_workers=num_workers,
                                  train_fraction=train_fraction,
                                  val_fraction=val_fraction,
-                                 test_fraction=test_fraction)
+                                 test_fraction=test_fraction,
+                                 use_weighted_sampler=use_weighted_sampler)
 
     return data_module
 
