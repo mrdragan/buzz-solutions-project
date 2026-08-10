@@ -1,6 +1,9 @@
 import os
 import typer 
 from typing import List
+from PIL import Image
+import torch
+from torchvision import transforms
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import TensorBoardLogger
@@ -96,6 +99,38 @@ def evaluate(
                               test_fraction=test_fraction)
 
     trainer.test(model, datamodule=data_module)
+
+
+@app.command()
+def predict(
+    image_path: str = typer.Option(..., "--image-path"),
+    checkpoint_path: str = typer.Option(..., "--checkpoint-path"),
+):
+    """
+    Evaluates the classification model on the test set
+    """
+    inv_label_map = {
+        0: 0, 
+        1: 5,
+        2: 8
+    }
+    # Load 
+    image = Image.open(image_path)  
+    model = DigitClassifier.load_from_checkpoint(checkpoint_path=checkpoint_path)
+
+    image = transforms.ToTensor()(image)[:1]
+    model.eval()
+    with torch.no_grad():
+        out = model(image)
+
+    out = torch.softmax(out, dim=1)
+    label = torch.argmax(out)
+    label = inv_label_map[label.item()]
+
+    print(f"The predicted class is: {label}")
+
+
+
 
 def _setup_trainer(output_dir, inference_mode=False):
 
