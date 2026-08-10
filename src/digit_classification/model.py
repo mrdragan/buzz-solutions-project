@@ -1,3 +1,4 @@
+from typing import List
 import pytorch_lightning as pl
 import torch
 import torch.nn as nn
@@ -10,15 +11,39 @@ class DigitClassifier(pl.LightningModule):
         self,
         num_classes: int,
         learning_rate: float = 1e-3,
+        hidden_dims: List[int] = [32, 64],
+        pool_indexes: List[int] = [0, 1]
     ):
         super().__init__()
 
         self.save_hyperparameters()
         self.learning_rate = learning_rate
 
-        # Model architecture
-        self.model = nn.Sequential(
-            # ...
+        # Check for improper pool count 
+        if len(pool_indexes) > 2:
+            raise ValueError("Please specify a maximum of two pooling layers")
+
+        conv_layers = []
+        in_channels = 1
+        # Specify hidden layers 
+        for i, out_channels in enumerate(hidden_dims):
+            conv_layers.extend([
+                nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1),
+                nn.ReLU(),
+            ])
+            in_channels = out_channels
+
+            # Add pooling layers 
+            if i in pool_indexes:
+                conv_layers.append(nn.MaxPool2d(2))
+
+        # Define backbone
+        self.features = nn.Sequential(*conv_layers)
+
+        # Define classifier layers
+        self.classifier = nn.Sequential(
+            nn.Flatten(),
+            nn.LazyLinear(num_classes), # Inferred input size
         )
 
         # Loss
@@ -30,7 +55,7 @@ class DigitClassifier(pl.LightningModule):
         self.test_accuracy = MulticlassAccuracy(num_classes=num_classes)
 
     def forward(self, x):
-        return self.model(x)
+        return self.classifier(self.features(x))
 
     def training_step(self, batch, batch_idx):
         x, y = batch
