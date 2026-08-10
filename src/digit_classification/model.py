@@ -9,7 +9,7 @@ class DigitClassifier(pl.LightningModule):
 
     def __init__(
         self,
-        num_classes: int,
+        num_classes: int = 3,
         learning_rate: float = 1e-3,
         hidden_dims: List[int] = [32, 64],
         pool_indexes: List[int] = [0, 1]
@@ -25,6 +25,7 @@ class DigitClassifier(pl.LightningModule):
 
         conv_layers = []
         in_channels = 1
+
         # Specify hidden layers 
         for i, out_channels in enumerate(hidden_dims):
             conv_layers.extend([
@@ -33,14 +34,14 @@ class DigitClassifier(pl.LightningModule):
             ])
             in_channels = out_channels
 
-            # Add pooling layers 
+            # Add pooling layers if specified
             if i in pool_indexes:
                 conv_layers.append(nn.MaxPool2d(2))
 
         # Define backbone
         self.features = nn.Sequential(*conv_layers)
 
-        # Define classifier layers
+        # Define classifier layer
         self.classifier = nn.Sequential(
             nn.Flatten(),
             nn.LazyLinear(num_classes), # Inferred input size
@@ -106,6 +107,13 @@ class DigitClassifier(pl.LightningModule):
             on_step=False,
             on_epoch=True,
         )
+
+    def predict_step(self, batch, batch_idx):
+        x, y = batch
+        logits = self(x)
+        class_scores = torch.softmax(logits, dim=1)
+        return class_scores
+
 
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(
