@@ -38,7 +38,7 @@ def train(
     learning_rate: float = 0.001,
     hidden_dims: List[int] = typer.Option([32, 64]),
     no_hidden: bool = typer.Option(False, "--no-hidden"),
-    pool_indexes: List[int] = typer.Option([0, 1]),
+    pool_indexes: List[int] = typer.Option([]),
 
     # Data params
     batch_size: int = 64,
