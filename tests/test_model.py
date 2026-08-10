@@ -27,7 +27,7 @@ def test_model_output_shape():
 )
 def test_model_architecture(hidden_dims):
     print("Testing Hidden Dim Param")
-    model = DigitClassifier(hidden_dims=hidden_dims)
+    model = DigitClassifier(hidden_dims=hidden_dims, pool_indexes=[])
 
     x = torch.randn(4, 1, 28, 28)
     logits = model(x)
