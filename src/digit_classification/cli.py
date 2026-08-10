@@ -70,6 +70,7 @@ def train(
 def evaluate(
     data_dir: str = typer.Option(..., "--data-dir"),
     checkpoint_path: str = typer.Option(..., "--checkpoint-path"),
+    output_dir: str = typer.Option(..., "--output-dir"),
 
     # Data params
     batch_size: int = 64,
@@ -82,7 +83,7 @@ def evaluate(
     Evaluates the classification model on the test set
     """
 
-    trainer = _setup_trainer(inference_mode=True)
+    trainer = _setup_trainer(output_dir=output_dir, inference_mode=True)
     model = DigitClassifier.load_from_checkpoint(checkpoint_path=checkpoint_path)
     data_module = _setup_data(data_dir=data_dir, 
                               batch_size=batch_size,
@@ -95,14 +96,35 @@ def evaluate(
 
 def _setup_trainer(output_dir, inference_mode=False):
 
+
+    callbacks = []
+
+    if not inference_mode:
+        callbacks.append(
+            ModelCheckpoint(
+                monitor="val_loss",
+                mode="min",
+                save_top_k=1,
+            )
+        )
+
+        logger = TensorBoardLogger(
+            save_dir=output_dir,
+        )
+
+    else:
+        logger = TensorBoardLogger(
+            save_dir=output_dir,
+            name="",
+            version="",
+        )
+
     trainer = pl.Trainer(
         accelerator="cpu",
         max_epochs=20,
-        callbacks=ModelCheckpoint(monitor="val_loss",
-                                  mode="min",
-                                  save_top_k=1),
-        logger=TensorBoardLogger(save_dir=output_dir),
-        inference_mode=inference_mode
+        callbacks=callbacks,
+        logger=logger,
+        inference_mode=inference_mode,
     )
 
     return trainer
