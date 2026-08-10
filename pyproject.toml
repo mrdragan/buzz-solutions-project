@@ -12,13 +12,14 @@ dependencies = [
     "matplotlib>=3.11.1",
     "numpy>=2.5.1",
     "pandas>=3.0.5",
+    "tensorboard>=2.21.0",
     "torch>=2.13.0",
     "torchvision>=0.28.0",
     "typer>=0.27.1",
 ]
 
 [project.scripts]
-digit-classification = "digit_classification.data:main"
+digit-classification = "digit_classification.cli:app"
 
 [build-system]
 requires = ["uv_build>=0.12.3,<0.13.0"]
