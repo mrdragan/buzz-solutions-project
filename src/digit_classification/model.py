@@ -1,8 +1,12 @@
 from typing import List
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
 import pytorch_lightning as pl
 import torch
 import torch.nn as nn
-from torchmetrics.classification import MulticlassAccuracy
+from torchmetrics.classification import (MulticlassAccuracy,
+    MulticlassConfusionMatrix, MulticlassPrecisionRecallCurve)
 
 
 class DigitClassifier(pl.LightningModule):
@@ -55,6 +59,9 @@ class DigitClassifier(pl.LightningModule):
         self.val_accuracy = MulticlassAccuracy(num_classes=num_classes)
         self.test_accuracy = MulticlassAccuracy(num_classes=num_classes)
 
+        self.conf_mat = MulticlassConfusionMatrix(num_classes=num_classes)
+        self.pr_curve = MulticlassPrecisionRecallCurve(num_classes=num_classes)
+
     def forward(self, x):
         return self.classifier(self.features(x))
 
@@ -84,6 +91,8 @@ class DigitClassifier(pl.LightningModule):
         loss = self.loss_fn(logits, y)
 
         self.val_accuracy(logits, y)
+        self.conf_mat.update(logits, y)
+        self.pr_curve.update(logits, y)
 
         self.log("val_loss", loss, on_step=False, 
                  on_epoch=True, prog_bar=True)
@@ -94,6 +103,10 @@ class DigitClassifier(pl.LightningModule):
             on_epoch=True,
         )
 
+    def on_validation_epoch_end(self):
+        self._plot_conf_mat()
+        self._plot_pr_curves()
+
     def test_step(self, batch, batch_idx):
         x, y = batch
 
@@ -101,6 +114,8 @@ class DigitClassifier(pl.LightningModule):
         loss = self.loss_fn(logits, y)
 
         self.test_accuracy(logits, y)
+        self.conf_mat(logits, y)
+        self.pr_curve(logits, y)
 
         self.log("test_loss", loss, on_step=False, on_epoch=True)
         self.log(
@@ -109,6 +124,10 @@ class DigitClassifier(pl.LightningModule):
             on_step=False,
             on_epoch=True,
         )
+
+    def on_test_epoch_end(self):
+        self._plot_conf_mat()
+        self._plot_pr_curves()
 
     def predict_step(self, batch, batch_idx):
         x, y = batch
@@ -123,3 +142,59 @@ class DigitClassifier(pl.LightningModule):
             lr=self.learning_rate,
         )
         return optimizer
+
+    def _plot_conf_mat(self):
+        cm = self.conf_mat.compute().cpu().numpy()
+
+        fig, ax = plt.subplots()
+
+        ax.imshow(cm)
+
+        ax.set_xlabel("Predicted")
+        ax.set_ylabel("Actual")
+        ax.set_xticks([0, 1, 2])
+        ax.set_yticks([0, 1, 2])
+        ax.set_xticklabels(["0", "5", "8"])
+        ax.set_yticklabels(["0", "5", "8"])
+
+        for i in range(3):
+            for j in range(3):
+                ax.text(j, i, cm[i, j], ha="center", va="center")
+
+        self.logger.experiment.add_figure(
+            "val/confusion_matrix",
+            fig,
+            self.current_epoch,
+        )
+
+        plt.close(fig)
+        self.conf_mat.reset()
+
+    def _plot_pr_curves(self):
+        precision, recall, thresholds = self.pr_curve.compute()
+
+        fig, ax = plt.subplots()
+
+        class_names = ["0", "5", "8"]
+
+        for i, class_name in enumerate(class_names):
+            ax.plot(
+                recall[i].cpu(),
+                precision[i].cpu(),
+                label=f"Class {class_name}",
+            )
+
+        ax.set_xlabel("Recall")
+        ax.set_ylabel("Precision")
+        ax.set_title("Validation Precision-Recall Curves")
+        ax.legend()
+        ax.grid()
+
+        self.logger.experiment.add_figure(
+            "val/precision_recall_curve",
+            fig,
+            self.current_epoch,
+        )
+
+        plt.close(fig)
+        self.pr_curve.reset()
