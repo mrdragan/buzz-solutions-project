@@ -1,5 +1,5 @@
 [project]
-name = "buzz-solutions-project"
+name = "digit-classification"
 version = "0.1.0"
 description = "This is an implementation of the Buzz Solutions coding challenge"
 readme = "README.md"
@@ -8,6 +8,7 @@ authors = [
 ]
 requires-python = ">=3.12"
 dependencies = [
+    "lightning>=2.6.5",
     "matplotlib>=3.11.1",
     "numpy>=2.5.1",
     "pandas>=3.0.5",
@@ -16,7 +17,7 @@ dependencies = [
 ]
 
 [project.scripts]
-buzz-solutions-project = "buzz_solutions_project:main"
+digit-classification = "digit_classification.data:main"
 
 [build-system]
 requires = ["uv_build>=0.12.3,<0.13.0"]
