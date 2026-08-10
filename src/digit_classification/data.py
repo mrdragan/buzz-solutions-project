@@ -43,6 +43,13 @@ class MNISTDataModule(pl.LightningDataModule):
             8: 3500,
         }
 
+        # Specify label mapping
+        self.label_map ={
+            0: 0, 
+            5: 1, 
+            8: 2
+        }
+
         # Define Transforms
         self.train_transforms = self.get_train_transforms()
         self.eval_transforms = self.get_eval_transforms()
@@ -98,16 +105,21 @@ class MNISTDataModule(pl.LightningDataModule):
                 selected[n_train + n_val:].tolist()
             )
 
+        # Setup datasets as needed
         if stage == "fit":
-            self.train_dataset = Subset(train_dataset, train_indices)
-            self.val_dataset = Subset(eval_dataset, val_indices)
+            self.train_dataset = RemapLabels(
+                Subset(train_dataset, train_indices), self.label_map)
+            self.val_dataset = RemapLabels(
+                Subset(eval_dataset, val_indices), self.label_map)
 
         elif stage == "validate":
-            self.val_dataset = Subset(eval_dataset, val_indices)
+            self.val_dataset = RemapLabels(
+                Subset(eval_dataset, val_indices), self.label_map)
 
         elif stage == "test" or stage == "predict":
-            self.test_dataset = Subset(eval_dataset, test_indices) 
-
+            self.test_dataset = RemapLabels(
+                Subset(eval_dataset, test_indices), self.label_map)
+ 
         else:
             raise ValueError("Stage must be 'fit', 'validate', 'test', or 'predict'")
 
@@ -155,6 +167,18 @@ class MNISTDataModule(pl.LightningDataModule):
             shuffle=False,
             num_workers=self.num_workers,
         )
+
+class RemapLabels(torch.utils.data.Dataset):
+    def __init__(self, dataset, label_map):
+        self.dataset = dataset
+        self.label_map = label_map
+
+    def __len__(self):
+        return len(self.dataset)
+
+    def __getitem__(self, idx):
+        x, y = self.dataset[idx]
+        return x, self.label_map[y]
 
 if __name__=="__main__":
     from tqdm import tqdm
