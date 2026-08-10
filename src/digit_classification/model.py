@@ -104,8 +104,8 @@ class DigitClassifier(pl.LightningModule):
         )
 
     def on_validation_epoch_end(self):
-        self._plot_conf_mat()
-        self._plot_pr_curves()
+        self._plot_conf_mat("val")
+        self._plot_pr_curves("val")
 
     def test_step(self, batch, batch_idx):
         x, y = batch
@@ -126,8 +126,8 @@ class DigitClassifier(pl.LightningModule):
         )
 
     def on_test_epoch_end(self):
-        self._plot_conf_mat()
-        self._plot_pr_curves()
+        self._plot_conf_mat("test")
+        self._plot_pr_curves("test")
 
     def predict_step(self, batch, batch_idx):
         x, y = batch
@@ -143,7 +143,7 @@ class DigitClassifier(pl.LightningModule):
         )
         return optimizer
 
-    def _plot_conf_mat(self):
+    def _plot_conf_mat(self, stage="val"):
         cm = self.conf_mat.compute().cpu().numpy()
 
         fig, ax = plt.subplots()
@@ -162,7 +162,7 @@ class DigitClassifier(pl.LightningModule):
                 ax.text(j, i, cm[i, j], ha="center", va="center")
 
         self.logger.experiment.add_figure(
-            "val/confusion_matrix",
+            stage + "/confusion_matrix",
             fig,
             self.current_epoch,
         )
@@ -170,7 +170,7 @@ class DigitClassifier(pl.LightningModule):
         plt.close(fig)
         self.conf_mat.reset()
 
-    def _plot_pr_curves(self):
+    def _plot_pr_curves(self, stage="val"):
         precision, recall, thresholds = self.pr_curve.compute()
 
         fig, ax = plt.subplots()
@@ -186,12 +186,15 @@ class DigitClassifier(pl.LightningModule):
 
         ax.set_xlabel("Recall")
         ax.set_ylabel("Precision")
-        ax.set_title("Validation Precision-Recall Curves")
+        if stage == "val":
+            ax.set_title("Validation Precision-Recall Curves")
+        else:
+            ax.set_title("Test Precision-Recall Curves")
         ax.legend()
         ax.grid()
 
         self.logger.experiment.add_figure(
-            "val/precision_recall_curve",
+            stage + "/precision_recall_curve",
             fig,
             self.current_epoch,
         )
