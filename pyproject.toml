@@ -1,0 +1,32 @@
+[project]
+name = "digit-classification"
+version = "0.1.0"
+description = "This is an implementation of the Buzz Solutions coding challenge"
+readme = "README.md"
+authors = [
+    { name = "mrdragan", email = "mrdragan777@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "lightning>=2.6.5",
+    "matplotlib>=3.11.1",
+    "numpy>=2.5.1",
+    "pandas>=3.0.5",
+    "tensorboard>=2.21.0",
+    "torch>=2.13.0",
+    "torchvision>=0.28.0",
+    "typer>=0.27.1",
+]
+
+[project.scripts]
+digit-classification = "digit_classification.cli:app"
+
+[build-system]
+requires = ["uv_build>=0.12.3,<0.13.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "ruff>=0.16.2",
+]
