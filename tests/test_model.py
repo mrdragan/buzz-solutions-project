@@ -34,6 +34,16 @@ def test_model_architecture(hidden_dims):
 
     assert logits.shape == (4, 3)
 
+def test_pool_indexes():
+    print("Testing pool_indexes Param")
+    model = DigitClassifier(hidden_dims=[], pool_indexes=[0, 1])
+
+    x = torch.randn(4, 1, 28, 28)
+    logits = model(x)
+
+    assert logits.shape == (4, 3)
+
+
 def test_model_loss():
     print("Testing loss function")
     model = DigitClassifier()
