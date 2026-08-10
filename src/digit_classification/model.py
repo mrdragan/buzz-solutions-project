@@ -66,7 +66,8 @@ class DigitClassifier(pl.LightningModule):
 
         self.train_accuracy(logits, y)
 
-        self.log("train_loss", loss, on_step=False, on_epoch=True)
+        self.log("train_loss", loss, on_step=False, 
+                 on_epoch=True, prog_bar=True)
         self.log(
             "train_accuracy",
             self.train_accuracy,
@@ -84,7 +85,8 @@ class DigitClassifier(pl.LightningModule):
 
         self.val_accuracy(logits, y)
 
-        self.log("val_loss", loss, on_step=False, on_epoch=True)
+        self.log("val_loss", loss, on_step=False, 
+                 on_epoch=True, prog_bar=True)
         self.log(
             "val_accuracy",
             self.val_accuracy,
